@@ -5,6 +5,18 @@
         "args" : []
 }
 ,
+"rinit" : {
+        "type" : "extern",
+        "code" : "c_rinit",
+        "args" : [{"type":"real"},{"type":"name"}]
+}
+,
+"rfwd" : {
+        "type" : "extern",
+        "code" : "c_rfwd",
+        "args" : [{"type":"value"},{"type":"name"}]
+}
+,
 "main" : {
         "type" : "struct",
         "args" : [],
@@ -18,6 +30,29 @@
                         "id" : ["a"],
                         "code" : "hello_world",
                         "args" : []
+                }
+,
+                 {
+                        "type" : "dfs",
+                        "names" : ["x", "y"]
+                }
+,               {
+                        "type" : "exec",
+                        "id" : ["b"],
+                        "code" : "rinit",
+                        "args" : [{"type":"iconst","value":10},{"type":"id","ref":["x"]}]
+                }
+,               {
+                        "type" : "exec",
+                        "id" : ["c"],
+                        "code" : "rfwd",
+                        "args" : [{"type":"id","ref":["x"]},{"type":"id","ref":["y"]}]
+                }
+,               {
+                        "type" : "exec",
+                        "id" : ["a"],
+                        "code" : "rprint",
+                        "args" : [{"type":"id","ref":["y"]}]
                 }
         ]
 }
