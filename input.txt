@@ -1,0 +1,24 @@
+{
+"hello_world" : {
+        "type" : "extern",
+        "code" : "c_helloworld",
+        "args" : []
+}
+,
+"main" : {
+        "type" : "struct",
+        "args" : [],
+        "body" : [
+                {
+                        "type" : "dfs",
+                        "names" : []
+                }
+,               {
+                        "type" : "exec",
+                        "id" : ["a"],
+                        "code" : "hello_world",
+                        "args" : []
+                }
+        ]
+}
+}
