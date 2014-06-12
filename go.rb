@@ -64,6 +64,11 @@ def prepare(program, context, recursion_level = 0)
                 result = execute = Execute.new(args['id'], args['code'], args_parser(args['args']))
                 $stderr.puts  ' ' * recursion_level + 'exec ' + execute.code + '(' + execute.args.join(', ') + ')'
 
+            when 'if'
+                result = opif = OperatorIf.new(args_parser(args['cond']))
+                $stderr.puts  ' ' * recursion_level + 'if (' + opif.cond.join(', ') + ')'
+                opif.body = prepare(args['body'], context, recursion_level)
+
             else
                 raise "Unknown command '#{name}' in json '#{args}'"
         end
