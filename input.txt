@@ -28,7 +28,7 @@
                             "type" : "exec",
                             "id" : ["_l21"],
                             "code" : "hello_world",
-                            "args" : [{"type":"id","ref":["Ctmp", {"type":"iconst","value":0}]},{"type":"id","ref":["Ctmp", {"type":"iconst","value":1}]},{"type":"id","ref":["Csum", {"type":"iconst","value":1}]}],
+                            "args" : [],
                             "rules" : []
                         }
                             ]

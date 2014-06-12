@@ -2,10 +2,18 @@ require_relative 'common'
 
 class OperatorIf < Element
     attr_reader :cond
-    attr_accessor :body
 
     def initialize(cond)
+        super()
         @cond = cond
         @body = []
+    end
+
+    def body=(cmds)
+        @body = cmds
+    end
+
+    def body
+        []
     end
 end

@@ -3,7 +3,7 @@ class Element
 
     def initialize
         @parent = nil
-        @data_fragments = []
+        @data_fragments = {}
     end
 
 end

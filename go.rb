@@ -55,9 +55,10 @@ def prepare(program, context, recursion_level = 0)
                 context.add_block block
                 $stderr.puts  ' ' * recursion_level + 'struct ' + name.to_s + '(' + block.args.join(', ') + ')'
                 block.body = prepare(args['body'], context, recursion_level)
+                block.body.each{ |cmd| cmd.parent = block }
 
             when 'dfs'
-                result = df = DataFragment.new(args['names'])
+                result = df = DataFragmentsDefinition.new(args['names'])
                 $stderr.puts  ' ' * recursion_level + 'dfs: ' + df.names.join(', ')
 
             when 'exec'
@@ -68,6 +69,7 @@ def prepare(program, context, recursion_level = 0)
                 result = opif = OperatorIf.new(args_parser(args['cond']))
                 $stderr.puts  ' ' * recursion_level + 'if (' + opif.cond.join(', ') + ')'
                 opif.body = prepare(args['body'], context, recursion_level)
+                opif.body.each{ |cmd| cmd.parent = opif }
 
             else
                 raise "Unknown command '#{name}' in json '#{args}'"
@@ -87,7 +89,17 @@ def execute(init_block, context)
     loop do
         break if ready_to_process.empty?
         block = ready_to_process.pop
+        p block.class
 
+        block.body.each do |command|
+            if command.kind_of?(DataFragmentsDefinition)
+                command.names.each{ |name| block.data_fragments[name] = DataFragment.new(name) }
+
+            else
+                p command.class
+
+            end
+        end
     end
 end
 
