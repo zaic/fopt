@@ -9,6 +9,10 @@ class Extern
         @args = args.to_a
     end
 
+    def execute(context)
+        # fork&exec
+    end
+
     # ToDo: comparator
 end
 
@@ -46,8 +50,8 @@ end
 
 class Context
     def initialize
-        @externs = []
-        @blocks = []
+        @externs = {}
+        @blocks = {}
     end
 
     attr_accessor :externs, :blocks
@@ -55,12 +59,12 @@ class Context
     def add_extern(extern)
         raise "Redefinition: extern '#{extern.name}' already exists" if @externs.include?(extern)
         raise "Redefinition: extern '#{extern.name}' already exists" if @blocks.include?(extern)
-        @externs << extern
+        @externs[extern.name] = extern
     end
 
     def add_block(struct)
         # ToDo: add check
-        @blocks << struct
+        @blocks[struct.name] = struct
     end
 
     def step_into
@@ -80,7 +84,6 @@ end
 
 def prepare(program, context, recursion_level = 0)
     program.map do |command|
-        p command
         result = nil
 
         name, args = (command.kind_of?(Array) ? command : ["<def:#{command['type']}>", command])
@@ -126,7 +129,6 @@ if ARGV.empty? then
 end
 
 program = JSON.parse(File.read(ARGV.first))
-#p program
 
 context = Context.new
 prepare(program, context)
