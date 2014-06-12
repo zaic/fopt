@@ -1,11 +1,11 @@
 require_relative 'common'
 
 class OperatorIf < Element
-    attr_reader :cond
+    attr_reader :condition
 
-    def initialize(cond)
-        super()
-        @cond = cond
+    def initialize(condition, dependencies)
+        super(dependencies)
+        @condition = condition
         @body = []
     end
 

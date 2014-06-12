@@ -36,6 +36,26 @@ def args_parser(json)
     [json.to_s]
 end
 
+# Parse JSON condition expression and return pair<ruby_expression_string, list_of_dependencies>
+def cond_parser(cond)
+    # p cond
+    if %w(+ - * / % && || < > <= >= != ==).include?(cond['type']) # opa, opa, operator
+        op_left = cond_parser(cond['operands'][0])
+        op_right = cond_parser(cond['operands'][1])
+        ["(#{op_left[0]}#{cond['type']}#{op_right[0]})", op_left[1] | op_right[1]]
+
+    elsif cond['type'] =~ /.const/ # iconst, fconst, sconst, etc...
+        ["(#{cond['value']})", []]
+
+    elsif cond['type'] == 'id' # data fragment
+        # ToDo: we need to go deeper?
+        ["(#{cond['ref'][0]})", [cond['ref'][0]]]
+
+    else
+        raise "Unknown type '#{cond['type']}' in condition '#{cond}'"
+    end
+end
+
 def prepare(program, context, recursion_level = 0)
     program.map do |command|
         result = nil
@@ -66,8 +86,8 @@ def prepare(program, context, recursion_level = 0)
                 $stderr.puts  ' ' * recursion_level + 'exec ' + execute.code + '(' + execute.args.join(', ') + ')'
 
             when 'if'
-                result = opif = OperatorIf.new(args_parser(args['cond']))
-                $stderr.puts  ' ' * recursion_level + 'if (' + opif.cond.join(', ') + ')'
+                result = opif = OperatorIf.new(*cond_parser(args['cond']))
+                $stderr.puts  ' ' * recursion_level + 'if (' + opif.condition + '), <' + opif.input_dfs_names.join(', ') + '>'
                 opif.body = prepare(args['body'], context, recursion_level)
                 opif.body.each{ |cmd| cmd.parent = opif }
 
@@ -89,15 +109,24 @@ def execute(init_block, context)
     loop do
         break if ready_to_process.empty?
         block = ready_to_process.pop
+
+        p "==="
         p block.class
 
-        block.body.each do |command|
-            if command.kind_of?(DataFragmentsDefinition)
-                command.names.each{ |name| block.data_fragments[name] = DataFragment.new(name) }
+        if block.kind_of?(Execute)
+            $stderr.puts "Executing #{block.id}..."
 
-            else
-                p command.class
+        else
+            block.body.each do |command|
+                if command.kind_of?(DataFragmentsDefinition)
+                    command.names.each{ |name| block.data_fragments[name] = DataFragment.new(name) }
 
+                else
+                    p command.class
+                    # iterate over dependencies and erase resolved
+                    que = (command.dep_counter == 0 ? ready_to_process : wait_for_data)
+                    que << command
+                end
             end
         end
     end
@@ -112,4 +141,5 @@ program = JSON.parse(File.read(ARGV.first))
 
 context = Context.new
 prepare(program, context)
+$stderr.puts "\nParsed\n\n"
 execute(context.blocks['main'], context)

@@ -5,6 +5,12 @@
         "args" : []
 }
 ,
+"init_n" : {
+        "type" : "extern",
+        "code" : "some_function_name",
+        "args" : [{"type": "name"}]
+}
+,
 "main" : {
         "type" : "struct",
         "args" : [],
@@ -18,6 +24,12 @@
                         "id" : ["a"],
                         "code" : "hello_world",
                         "args" : []
+                }
+,               {
+                        "type" : "exec",
+                        "id" : ["b"],
+                        "code" : "init_n",
+                        "args" : [{"type": "id", "ref": ["N"]}]
                 }
 ,
                  {
