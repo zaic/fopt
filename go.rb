@@ -1,52 +1,6 @@
 require 'json'
 
-class Extern
-    attr_reader :orig_name, :name, :args
-
-    def initialize(orig_name, name, args)
-        @orig_name = orig_name.to_s
-        @name = name.to_s
-        @args = args.to_a
-    end
-
-    def execute(context)
-        # fork&exec
-    end
-
-    # ToDo: comparator
-end
-
-class DataFragment
-    attr_reader :names
-
-    def initialize(names)
-        @names = names.to_a
-    end
-end
-
-class Execute
-    attr_reader :id, :code, :args
-
-    def initialize(id, code, args)
-        @id = id.to_s
-        @code = code.to_s
-        @args = args.to_a
-    end
-end
-
-class Block
-    attr_reader :name, :args
-    attr_accessor :body
-
-    def initialize(name, args)
-        @name = name.to_s
-        @args = args.to_a
-    end
-
-    def body=(cmds)
-        @body = cmds
-    end
-end
+require_relative 'luna/luna'
 
 class Context
     def initialize
@@ -88,7 +42,6 @@ def prepare(program, context, recursion_level = 0)
 
         name, args = (command.kind_of?(Array) ? command : ["<def:#{command['type']}>", command])
         $stderr.puts  ' ' * recursion_level + '> ' + name.to_s
-        context.step_into
         recursion_level += 2
 
         case args['type']
@@ -116,10 +69,20 @@ def prepare(program, context, recursion_level = 0)
         end
 
         recursion_level -= 2
-        context.step_out
         $stderr.puts  ' ' * recursion_level + '< ' + name.to_s
 
         result
+    end
+end
+
+def execute(init_block, context)
+    ready_to_process = [init_block]
+    wait_for_data = []
+
+    loop do
+        break if ready_to_process.empty?
+        block = ready_to_process.pop
+
     end
 end
 
@@ -132,3 +95,4 @@ program = JSON.parse(File.read(ARGV.first))
 
 context = Context.new
 prepare(program, context)
+execute(context.blocks['main'], context)
