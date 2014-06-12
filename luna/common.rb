@@ -11,7 +11,7 @@ class Element
         @data_fragments = {}
 
         @input_dfs = []
-        @dep_counter = input_dfs_names.count
+        @dep_counter = 0
         @input_dfs_names = input_dfs_names
     end
 

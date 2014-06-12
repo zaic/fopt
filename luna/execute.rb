@@ -9,4 +9,8 @@ class Execute < Element
         @code = code.to_s
         @args = args.to_a
     end
+
+    def run
+        raise "Not implemented :("
+    end
 end

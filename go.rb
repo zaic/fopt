@@ -30,15 +30,9 @@ class Context
     end
 end
 
-# Convert JSON to ruby expression
-def args_parser(json)
-    # ToDo: implement :)
-    [json.to_s]
-end
-
 # Parse JSON condition expression and return pair<ruby_expression_string, list_of_dependencies>
 def cond_parser(cond)
-    # p cond
+    p cond
     if %w(+ - * / % && || < > <= >= != ==).include?(cond['type']) # opa, opa, operator
         op_left = cond_parser(cond['operands'][0])
         op_right = cond_parser(cond['operands'][1])
@@ -55,6 +49,14 @@ def cond_parser(cond)
         raise "Unknown type '#{cond['type']}' in condition '#{cond}'"
     end
 end
+
+# Convert JSON to ruby expression
+def args_parser(json)
+    # ToDo: implement :)
+    json.map{ |arg| cond_parser(arg)[0] }
+end
+
+
 
 def prepare(program, context, recursion_level = 0)
     program.map do |command|
@@ -102,6 +104,12 @@ def prepare(program, context, recursion_level = 0)
     end
 end
 
+def find_data_fragment(block, df_name)
+    raise "Data fragment '#{df_name}' not found" if block.nil?
+    return block.data_fragments[df_name] if block.data_fragments.key?(df_name)
+    find_data_fragment(block.parent, df_name)
+end
+
 def execute(init_block, context)
     ready_to_process = [init_block]
     wait_for_data = []
@@ -115,15 +123,22 @@ def execute(init_block, context)
 
         if block.kind_of?(Execute)
             $stderr.puts "Executing #{block.id}..."
+            block.run
 
         else
             block.body.each do |command|
                 if command.kind_of?(DataFragmentsDefinition)
+                    $stderr.puts "Defining variables #{command.names.join(', ')}"
                     command.names.each{ |name| block.data_fragments[name] = DataFragment.new(name) }
 
                 else
-                    p command.class
-                    # iterate over dependencies and erase resolved
+                    $stderr.puts 'opa, class: ' + command.class.to_s
+                    command.input_dfs_names.each do |arg_name|
+                        arg_df = find_data_fragment(command, arg_name)
+                        command.dep_counter += 1 if arg_df.nil?
+                        command.input_dfs << arg_df
+                    end
+                    p command.input_dfs
                     que = (command.dep_counter == 0 ? ready_to_process : wait_for_data)
                     que << command
                 end
@@ -132,7 +147,7 @@ def execute(init_block, context)
     end
 end
 
-if ARGV.empty? then
+if ARGV.empty?
     $stderr.puts "Usage: #{__FILE__} input.txt"
     exit
 end
