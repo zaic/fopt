@@ -10,7 +10,7 @@ class Execute < Element
         @args = args.to_a
     end
 
-    def run
-        raise "Not implemented :("
+    def run(arg_dfs)
+        arg_dfs[0].value = 5 if !arg_dfs.empty?
     end
 end

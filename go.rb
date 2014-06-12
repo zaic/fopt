@@ -52,8 +52,8 @@ end
 
 # Convert JSON to ruby expression
 def args_parser(json)
-    # ToDo: implement :)
-    json.map{ |arg| cond_parser(arg)[0] }
+    # ToDo: rename ;)
+    json.map{ |arg| cond_parser(arg)[0][1..-2] }
 end
 
 
@@ -105,6 +105,7 @@ def prepare(program, context, recursion_level = 0)
 end
 
 def find_data_fragment(block, df_name)
+    # $stderr.puts "Searching for '#{df_name}' in #{block}"
     raise "Data fragment '#{df_name}' not found" if block.nil?
     return block.data_fragments[df_name] if block.data_fragments.key?(df_name)
     find_data_fragment(block.parent, df_name)
@@ -112,18 +113,33 @@ end
 
 def execute(init_block, context)
     ready_to_process = [init_block]
-    wait_for_data = []
+    wait_for_data = [] # ToDo: remove nah?
 
     loop do
         break if ready_to_process.empty?
         block = ready_to_process.pop
 
         p "==="
-        p block.class
+        $stderr.puts "Processing #{block}"
 
         if block.kind_of?(Execute)
-            $stderr.puts "Executing #{block.id}..."
-            block.run
+            $stderr.puts "Executing #{block.id} (parent: #{block.parent}..."
+            block.run(block.args.map{ |name| find_data_fragment(block, name)})
+
+            # relax dependencies on output variables
+            # ToDo: output variables
+            function = context.externs[block.code]
+            raise "Function '#{block.code}' not found" if function.nil?
+            function.args.size.times do |i|
+                next unless function.args[i] == 'name' # not output variable
+                df = find_data_fragment(block, block.args[i])
+                $stderr.puts "set #{df.name} = #{df.value.to_s}"
+                df.dependents.each do |cmd|
+                    cmd.dep_counter -= 1
+                    $stderr.puts "relax #{cmd}, cnt = #{cmd.dep_counter}"
+                    ready_to_process << cmd if cmd.dep_counter == 0
+                end
+            end
 
         else
             block.body.each do |command|
@@ -135,7 +151,10 @@ def execute(init_block, context)
                     $stderr.puts 'opa, class: ' + command.class.to_s
                     command.input_dfs_names.each do |arg_name|
                         arg_df = find_data_fragment(command, arg_name)
-                        command.dep_counter += 1 if arg_df.nil?
+                        if arg_df.value.nil?
+                            command.dep_counter += 1
+                            arg_df.dependents << command
+                        end
                         command.input_dfs << arg_df
                     end
                     p command.input_dfs

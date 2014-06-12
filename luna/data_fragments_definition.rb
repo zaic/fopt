@@ -12,9 +12,11 @@ end
 class DataFragment < Element
     attr_reader :name
     attr_accessor :value
+    attr_accessor :dependents
 
     def initialize(name)
         super()
         @name, @value = name, nil
+        @dependents = []
     end
 end

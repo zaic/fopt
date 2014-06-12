@@ -14,6 +14,6 @@ class OperatorIf < Element
     end
 
     def body
-        []
+        @body # ToDo: check condition
     end
 end
