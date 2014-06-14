@@ -14,6 +14,9 @@ class OperatorIf < Element
     end
 
     def body
-        @body # ToDo: check condition
+        # ToDo check variable type
+        cond_expr = input_dfs.map{ |var| "#{var.name} = #{var.value}; " }.join + @condition
+        $stderr.puts "Check condition '#{cond_expr}'"
+        eval(cond_expr, nil) ? @body : []
     end
 end

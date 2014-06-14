@@ -90,8 +90,7 @@ def prepare(program, context, recursion_level = 0)
             when 'if'
                 result = opif = OperatorIf.new(*cond_parser(args['cond']))
                 $stderr.puts  ' ' * recursion_level + 'if (' + opif.condition + '), <' + opif.input_dfs_names.join(', ') + '>'
-                opif.body = prepare(args['body'], context, recursion_level)
-                opif.body.each{ |cmd| cmd.parent = opif }
+                opif.body = prepare(args['body'], context, recursion_level).each{ |cmd| cmd.parent = opif }
 
             else
                 raise "Unknown command '#{name}' in json '#{args}'"

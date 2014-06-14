@@ -11,6 +11,6 @@ class Execute < Element
     end
 
     def run(arg_dfs)
-        arg_dfs[0].value = 5 if !arg_dfs.empty?
+        arg_dfs[0].value = (rand * 3).to_i if !arg_dfs.empty?
     end
 end
