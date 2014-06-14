@@ -42,9 +42,14 @@ def cond_parser(cond)
         ["(#{cond['value']})", []]
 
     elsif cond['type'] == 'id' # data fragment
-        # ToDo: we need to go deeper?
-        ["(#{cond['ref'][0]})", [cond['ref'][0]]]
-
+        # get variable name
+        var_name = cond['ref'][0]
+        # other arguments correspond to array indexes
+        res =cond['ref'][1..-1].map{ |var| cond_parser(var) }.reduce([var_name, []]){ |sum, pair| [sum[0] + '[' + pair[0] + ']', sum[1] | pair[1]] }
+        # add itself ot dependencies
+        res[1] |= [res[0]]
+        # and return result
+        res
     else
         raise "Unknown type '#{cond['type']}' in condition '#{cond}'"
     end

@@ -17,7 +17,7 @@
         "body" : [
                 {
                         "type" : "dfs",
-                        "names" : ["N"]
+                        "names" : ["N, k"]
                 }
 ,               {
                         "type" : "exec",
@@ -34,7 +34,8 @@
 ,
                  {
                             "type" : "if",
-                            "cond" : {"type":">","operands":[{"type":"id","ref":["N"]},{"type":"iconst","value":1}]},
+                            "cond" : {"type":">","operands":[{"type":"id","ref":["N", {"type":"id","ref":["k"]}]},
+                                                             {"type":"iconst","value":1}]},
                             "body" : [
                         {
                             "type" : "exec",
