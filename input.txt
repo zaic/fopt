@@ -11,6 +11,12 @@
         "args" : [{"type": "name"}]
 }
 ,
+"init_random_value" : {
+        "type" : "extern",
+        "code" : "init_random_value",
+        "args" : [{"type": "int"}, {"type": "name"}]
+}
+,
 "main" : {
         "type" : "struct",
         "args" : [],
@@ -36,7 +42,7 @@
                     "type": "for",
                     "var": "i",
                     "first" : {"type": "iconst", "value": "0"},
-                    "last" : {"type": "iconst", "value": "1+1"},
+                    "last" : {"type": "iconst", "value": "1-1"},
                     "body": [
                         {
                             "type": "dfs",
@@ -44,9 +50,9 @@
                         },
                         {
                             "type": "exec",
-                            "id": ["fixme"],
-                            "code": "hello_world",
-                            "args": [{"type": "id", "ref": ["i"]}],
+                            "id": ["init_random_value"],
+                            "code": "init_random_value",
+                            "args": [{"type": "iconst", "value": "12"}, {"type": "id", "ref": ["i"]}],
                             "rules": []
                         }
                     ]

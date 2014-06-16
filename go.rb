@@ -11,13 +11,14 @@ class Context
     attr_accessor :externs, :blocks
 
     def add_extern(extern)
-        raise "Redefinition: extern '#{extern.name}' already exists" if @externs.include?(extern)
-        raise "Redefinition: extern '#{extern.name}' already exists" if @blocks.include?(extern)
+        raise "Redefinition: extern '#{extern.name}' already exists" if @externs.key?(extern.name)
+        raise "Redefinition: struct '#{extern.name}' already exists" if @blocks.key?(extern.name)
         @externs[extern.name] = extern
     end
 
     def add_block(struct)
-        # ToDo: add check
+        raise "Redefinition: extern '#{struct.name}' already exists" if @externs.key?(struct.name)
+        raise "Redefinition: struct '#{struct.name}' already exists" if @blocks.key?(struct.name)
         @blocks[struct.name] = struct
     end
 
@@ -32,7 +33,6 @@ end
 
 # Parse JSON condition expression and return pair<ruby_expression_string, list_of_dependencies>
 def cond_parser(cond)
-    p cond
     if %w(+ - * / % && || < > <= >= != ==).include?(cond['type']) # op, op, operator
         op_left = cond_parser(cond['operands'][0])
         op_right = cond_parser(cond['operands'][1])
@@ -136,23 +136,51 @@ def execute(init_block, context)
         $stderr.puts "Processing #{block}"
 
         if block.kind_of?(Execute)
-            $stderr.puts "Executing #{block.id} (parent: #{block.parent}..."
-            block.run(block.args.map{ |name| find_data_fragment(block, name)})
+            $stderr.puts "Executing #{block.code} (parent: #{block.parent}, args: #{block.args})"
 
-            # relax dependencies on output variables
-            # ToDo: output variables
-            function = context.externs[block.code]
-            raise "Function '#{block.code}' not found" if function.nil?
-            function.args.size.times do |i|
-                next unless function.args[i] == 'name' # not output variable
-                df = find_data_fragment(block, block.args[i])
-                $stderr.puts "set #{df.name} = #{df.value.to_s}"
-                df.dependents.each do |cmd|
-                    cmd.dep_counter -= 1
-                    $stderr.puts "relax #{cmd}, cnt = #{cmd.dep_counter}"
-                    ready_to_process << cmd if cmd.dep_counter == 0
+            # extern function
+            if context.externs.key?(block.code)
+                function = context.externs[block.code]
+                $stderr.puts "Function prototype is #{function.args}"
+
+                #resolved_args = block.args.map{ |name| find_data_fragment(block, name)}
+                resolved_args = function.args.size.times.map do |i|
+                    type = function.args[i]
+                    name = block.args[i]
+
+                    if type == 'name' or type == 'value'
+                        find_data_fragment(block, name)
+                    elsif type == 'int' or type == 'real' or type == 'string'
+                        $stderr.puts "Create stub DataFragment with value '#{name}'"
+                        DataFragment.new("noname_expression", block.local_eval(name))
+                    else
+                        fail "Unknown argument type '#{type}'"
+                    end
                 end
+                block.run(resolved_args)
+                # relax dependencies on output variables
+                # ToDo: output variables
+
+                raise "Function '#{block.code}' not found" if function.nil?
+                function.args.size.times do |i|
+                    next unless function.args[i] == 'name' # not output variable
+                    df = find_data_fragment(block, block.args[i])
+                    $stderr.puts "set #{df.name} = #{df.value.to_s}"
+                    df.dependents.each do |cmd|
+                        cmd.dep_counter -= 1
+                        $stderr.puts "relax #{cmd}, cnt = #{cmd.dep_counter}"
+                        ready_to_process << cmd if cmd.dep_counter == 0
+                    end
+                end
+
+            # inner struct function
+            elsif context.blocks.key?(block.code)
+
+            # ooops...
+            else
+                fail "Function '#{block.code}' doesn't defined"
             end
+
 
         else
             block.body.each do |command|
@@ -171,6 +199,7 @@ def execute(init_block, context)
                             arg_name = indexes_expr.shift
                             $stderr.puts "arg = '#{arg_name}', inds = '#{indexes_expr}'"
                             indexes = indexes_expr.map do |index_expr|
+                                # FixMe replace by local_eval
                                 expr = command.input_dfs.select{ |var| not var.value.nil? }.map{ |var| "#{var.name} = #{var.value}; " }.join + index_expr
                                 $stderr.puts "Index calculated as '#{expr}'"
                                 nil

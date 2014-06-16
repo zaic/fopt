@@ -11,10 +11,13 @@ class Execute < Element
     end
 
     def run(arg_dfs)
-        p @code
         case @code
             when 'init_n'
                 arg_dfs[0].value = (rand * 3).to_i if !arg_dfs.empty?
+
+            when 'init_random_value'
+                # arg_dfs.each{ |arg| puts "#{arg.name} = #{arg.value}" }
+                arg_dfs.each{ |arg| arg.value = (rand * 3).to_i }
 
             else
                 $stderr.puts "given arguments = #{arg_dfs.map{ |arg| "#{arg.name} = #{arg.value.to_s}" }.join(', ')}"
