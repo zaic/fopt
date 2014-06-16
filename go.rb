@@ -52,6 +52,7 @@ def cond_parser(cond)
         res[0] = "(#{res[0]})"
         # and return result
         res
+
     else
         fail "Unknown type '#{cond['type']}' in condition '#{cond}'"
     end
@@ -60,7 +61,7 @@ end
 # Convert JSON to ruby expression
 def args_parser(json)
     # ToDo: rename ;)
-    json.map{ |arg| cond_parser(arg)[0][1..-2] }
+    json.map{ |arg| cond_parser(arg) }.reduce([[],[]]){ |sum, parg| [sum[0] | [parg[0]], sum[1] | parg[1]] }
 end
 
 
@@ -80,7 +81,7 @@ def prepare(program, context, recursion_level = 0)
                 $stderr.puts  ' ' * recursion_level + 'extern ' + name.to_s + '(' + extern.args.join(', ') + ')'
 
             when 'struct'
-                result = block = Block.new(name, args_parser(args['args']))
+                result = block = Block.new(name, args_parser(args['args'])[0])
                 context.add_block block
                 $stderr.puts  ' ' * recursion_level + 'struct ' + name.to_s + '(' + block.args.join(', ') + ')'
                 block.body = prepare(args['body'], context, recursion_level)
@@ -91,8 +92,9 @@ def prepare(program, context, recursion_level = 0)
                 $stderr.puts  ' ' * recursion_level + 'dfs: ' + df.names.join(', ')
 
             when 'exec'
-                result = execute = Execute.new(args['id'], args['code'], args_parser(args['args']))
-                $stderr.puts  ' ' * recursion_level + 'exec ' + execute.code + '(' + execute.args.join(', ') + ')'
+                func_args, deps = *args_parser(args['args'])
+                result = execute = Execute.new(args['id'], args['code'], func_args, deps)
+                $stderr.puts  ' ' * recursion_level + 'exec ' + execute.code + '(' + execute.args.join(', ') + ') <' + deps.join(', ') + '>'
 
             when 'if'
                 result = opif = OperatorIf.new(*cond_parser(args['cond']))
@@ -199,14 +201,19 @@ def execute(init_block, context)
                             arg_name = indexes_expr.shift
                             $stderr.puts "arg = '#{arg_name}', inds = '#{indexes_expr}'"
                             indexes = indexes_expr.map do |index_expr|
-                                # FixMe replace by local_eval
+                                # FixMe replace by local_eval. or don't replace...
                                 expr = command.input_dfs.select{ |var| not var.value.nil? }.map{ |var| "#{var.name} = #{var.value}; " }.join + index_expr
-                                $stderr.puts "Index calculated as '#{expr}'"
-                                nil
+                                index_value = eval(expr).to_s
+                                $stderr.puts "Index calculated as '#{expr}' = '#{index_value}'"
+                                index_value
                             end
                         end
+                        arg_name
 
                         arg_df = find_data_fragment(command, arg_name)
+                        indexes.each{ |id| arg_df = arg_df[id] }
+                        $stderr.puts "Ololo my name is '#{arg_df.inspect}'"
+
                         if arg_df.value.nil?
                             command.dep_counter += 1
                             arg_df.dependents << command

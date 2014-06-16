@@ -26,7 +26,14 @@ class DataFragment < Element
         @dependents = []
     end
 
+    def [](id)
+        value = {} unless value.kind_of?(Hash)
+        value[id] = DataFragment.new(name + "[#{id}]") unless value.key?(id.to_s)
+        value[id]
+    end
+
     def copy
+        fail "Data fragments shouldn't be copied"
         res = DataFragment.new(@name)
         res.copy!(self)
         res.value = @value.dup
