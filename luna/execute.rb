@@ -11,6 +11,20 @@ class Execute < Element
     end
 
     def run(arg_dfs)
-        arg_dfs[0].value = (rand * 3).to_i if !arg_dfs.empty?
+        p @code
+        case @code
+            when 'init_n'
+                arg_dfs[0].value = (rand * 3).to_i if !arg_dfs.empty?
+
+            else
+                $stderr.puts "given arguments = #{arg_dfs.map{ |arg| "#{arg.name} = #{arg.value.to_s}" }.join(', ')}"
+        end
+
+    end
+
+    def copy
+        res = Execute.new(@id.dup, @code.dup, @args.dup)
+        res.copy!(self)
+        res
     end
 end

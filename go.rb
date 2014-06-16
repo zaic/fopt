@@ -99,6 +99,13 @@ def prepare(program, context, recursion_level = 0)
                 $stderr.puts  ' ' * recursion_level + 'if (' + opif.condition + '), <' + opif.input_dfs_names.join(', ') + '>'
                 opif.body = prepare(args['body'], context, recursion_level).each{ |cmd| cmd.parent = opif }
 
+            when 'for'
+                from = cond_parser(args['first'])
+                to = cond_parser(args['last'])
+                result = opfor = OperatorFor.new(args['var'], from[0], to[0], from[1] | to[1])
+                $stderr.puts  ' ' * recursion_level + "for (#{opfor.counter_name} = #{opfor.counter_from_expr} .. #{opfor.counter_to_expr}) <" + opfor.input_dfs_names.join(', ') + '>'
+                opfor.body = prepare(args['body'], context, recursion_level).each{ |cmd| cmd.parent = opif }
+
             else
                 raise "Unknown command '#{name}' in json '#{args}'"
         end

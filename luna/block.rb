@@ -9,4 +9,10 @@ class Block < Element
         @name = name.to_s
         @args = args.to_a
     end
+
+    def copy
+        res = Block.new(@name, @args.dup)
+        res.copy!(self)
+        res.body = @body.map(&:copy)
+    end
 end

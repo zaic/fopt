@@ -7,6 +7,12 @@ class DataFragmentsDefinition < Element
         super()
         @names = names.to_a
     end
+
+    def copy
+        res = DataFragmentsDefinition.new(@names.dup)
+        res.copy!(self)
+        res
+    end
 end
 
 class DataFragment < Element
@@ -14,9 +20,17 @@ class DataFragment < Element
     attr_accessor :value
     attr_accessor :dependents
 
-    def initialize(name)
+    def initialize(name, value = nil)
         super()
-        @name, @value = name, nil
+        @name, @value = name, value
         @dependents = []
+    end
+
+    def copy
+        res = DataFragment.new(@name)
+        res.copy!(self)
+        res.value = @value.dup
+        res.dependents = @dependents.dup
+        res
     end
 end

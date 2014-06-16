@@ -32,6 +32,26 @@
                         "args" : [{"type": "id", "ref": ["N"]}]
                 }
 ,
+                {
+                    "type": "for",
+                    "var": "i",
+                    "first" : {"type": "iconst", "value": "0"},
+                    "last" : {"type": "iconst", "value": "1+1"},
+                    "body": [
+                        {
+                            "type": "dfs",
+                            "names": []
+                        },
+                        {
+                            "type": "exec",
+                            "id": ["fixme"],
+                            "code": "hello_world",
+                            "args": [{"type": "id", "ref": ["i"]}],
+                            "rules": []
+                        }
+                    ]
+                }
+,
                  {
                             "type" : "if",
                             "cond" : {"type":">","operands":[{"type":"id","ref":["N", {"type": "id", "ref": ["k"]}]},

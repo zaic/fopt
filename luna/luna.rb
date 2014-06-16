@@ -4,3 +4,5 @@ require_relative 'execute'
 require_relative 'block'
 
 require_relative 'operator_if'
+
+require_relative 'operator_for'
