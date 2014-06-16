@@ -59,9 +59,18 @@ def cond_parser(cond)
 end
 
 # Convert JSON to ruby expression
-def args_parser(json)
+def args_parser(json, output_variables = nil)
     # ToDo: rename ;)
-    json.map{ |arg| cond_parser(arg) }.reduce([[],[]]){ |sum, parg| [sum[0] | [parg[0]], sum[1] | parg[1]] }
+    target_variables = []
+    res = json.map{ |arg| cond_parser(arg) }.reduce([[],[]]) do |sum, parg|
+        parg[0] = parg[0][1...-1]
+        target_variables << parg[0]
+        [sum[0] | [parg[0]], sum[1] | parg[1]]
+    end
+    p target_variables
+    p output_variables
+    output_variables.size.times{ |i| res[1] -= [target_variables[i]] if output_variables[i] } if output_variables # FixMe required input variable can be removed too :(
+    res
 end
 
 
@@ -92,7 +101,15 @@ def prepare(program, context, recursion_level = 0)
                 $stderr.puts  ' ' * recursion_level + 'dfs: ' + df.names.join(', ')
 
             when 'exec'
-                func_args, deps = *args_parser(args['args'])
+                # FixMe only input varibles should be included in dependencies
+                code = args['code']
+                prototype = context.externs[code] if context.externs.key?(code)
+                prototype = context.blocks[code] if context.blocks.key?(code)
+                fail "Unable to find function '#{code}' prototype" if prototype.nil?
+                output_hint = prototype.args.map{ |type| type == 'name' }
+
+                func_args, deps = *args_parser(args['args'], output_hint)
+
                 result = execute = Execute.new(args['id'], args['code'], func_args, deps)
                 $stderr.puts  ' ' * recursion_level + 'exec ' + execute.code + '(' + execute.args.join(', ') + ') <' + deps.join(', ') + '>'
 
@@ -119,6 +136,7 @@ def prepare(program, context, recursion_level = 0)
     end
 end
 
+# FixMe move to Element
 def find_data_fragment(block, df_name)
     # $stderr.puts "Searching for '#{df_name}' in #{block}"
     raise "Data fragment '#{df_name}' not found" if block.nil?
@@ -151,10 +169,30 @@ def execute(init_block, context)
                     name = block.args[i]
 
                     if type == 'name' or type == 'value'
-                        find_data_fragment(block, name)
+                        # FixMe copy-paste :(
+                        indexes = []
+                        if name.include?('[')
+                            $stderr.puts "It's array in function args '#{name}'"
+                            indexes_expr = name.gsub(/[\[\]]/, ' ').split(/\s+/)
+                            name = indexes_expr.shift
+                            indexes = indexes_expr.map do |index_expr|
+                                # FixMe replace by local_eval. or don't replace...
+                                expr = block.input_dfs.select{ |var| not var.value.nil? }.map{ |var| "#{var.name} = #{var.value}; " }.join + index_expr
+                                index_value = eval(expr).to_s
+                                $stderr.puts "Index calculated as '#{expr}' = '#{index_value}'"
+                                index_value
+                            end
+                        end
+
+                        df = find_data_fragment(block, name)
+                        indexes.each{ |id| df = df[id] }
+                        $stderr.puts "TrOlolo my name is '#{df.inspect}'"
+                        df
+
                     elsif type == 'int' or type == 'real' or type == 'string'
                         $stderr.puts "Create stub DataFragment with value '#{name}'"
                         DataFragment.new("noname_expression", block.local_eval(name))
+
                     else
                         fail "Unknown argument type '#{type}'"
                     end
@@ -166,11 +204,12 @@ def execute(init_block, context)
                 raise "Function '#{block.code}' not found" if function.nil?
                 function.args.size.times do |i|
                     next unless function.args[i] == 'name' # not output variable
-                    df = find_data_fragment(block, block.args[i])
+                    #df = find_data_fragment(block, block.args[i])
+                    df = block.resolve_indexes(block.args[i])
                     $stderr.puts "set #{df.name} = #{df.value.to_s}"
                     df.dependents.each do |cmd|
                         cmd.dep_counter -= 1
-                        $stderr.puts "relax #{cmd}, cnt = #{cmd.dep_counter}"
+                        $stderr.puts "relax #{cmd}, cnt = #{cmd.dep_counter}" # ToDo delete
                         ready_to_process << cmd if cmd.dep_counter == 0
                     end
                 end
@@ -221,7 +260,6 @@ def execute(init_block, context)
 
                         command.input_dfs << arg_df
                     end
-                    p command.input_dfs
                     que = (command.dep_counter == 0 ? ready_to_process : wait_for_data)
                     que << command
                 end

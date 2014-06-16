@@ -8,13 +8,13 @@
     "init_n" : {
         "type" : "extern",
         "code" : "some_function_name",
-        "args" : [{"type": "name"}]
+        "args" : [{"type": "value"}]
     }
     ,
     "init_arr" : {
         "type" : "extern",
         "code" : "some_function_name",
-        "args" : [{"type": "name"}]
+        "args" : [{"type": "value"}]
     }
     ,
     "init_random_value" : {
@@ -43,7 +43,7 @@
             "type": "for",
             "var": "i",
             "first" : {"type": "iconst", "value": "0"},
-            "last" : {"type": "iconst", "value": "1-1"},
+            "last" : {"type": "iconst", "value": "1"},
             "body": [
                 {
                     "type": "dfs",

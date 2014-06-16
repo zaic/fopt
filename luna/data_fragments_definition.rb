@@ -27,9 +27,10 @@ class DataFragment < Element
     end
 
     def [](id)
-        value = {} unless value.kind_of?(Hash)
-        value[id] = DataFragment.new(name + "[#{id}]") unless value.key?(id.to_s)
-        value[id]
+        @value = {} unless @value.kind_of?(Hash)
+        @value[id] = DataFragment.new(name + "[#{id}]") unless @value.key?(id.to_s)
+        @value[id]
+
     end
 
     def copy
