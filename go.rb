@@ -33,7 +33,7 @@ end
 # Parse JSON condition expression and return pair<ruby_expression_string, list_of_dependencies>
 def cond_parser(cond)
     p cond
-    if %w(+ - * / % && || < > <= >= != ==).include?(cond['type']) # opa, opa, operator
+    if %w(+ - * / % && || < > <= >= != ==).include?(cond['type']) # op, op, operator
         op_left = cond_parser(cond['operands'][0])
         op_right = cond_parser(cond['operands'][1])
         ["(#{op_left[0]}#{cond['type']}#{op_right[0]})", op_left[1] | op_right[1]]
@@ -45,13 +45,15 @@ def cond_parser(cond)
         # get variable name
         var_name = cond['ref'][0]
         # other arguments correspond to array indexes
-        res =cond['ref'][1..-1].map{ |var| cond_parser(var) }.reduce([var_name, []]){ |sum, pair| [sum[0] + '[' + pair[0] + ']', sum[1] | pair[1]] }
+        res = cond['ref'][1..-1].map{ |var| cond_parser(var) }.reduce([var_name, []]){ |sum, pair| [sum[0] + '[' + pair[0] + ']', sum[1] | pair[1]] }
         # add itself ot dependencies
         res[1] |= [res[0]]
+        # add braces around expression
+        res[0] = "(#{res[0]})"
         # and return result
         res
     else
-        raise "Unknown type '#{cond['type']}' in condition '#{cond}'"
+        fail "Unknown type '#{cond['type']}' in condition '#{cond}'"
     end
 end
 
@@ -154,11 +156,26 @@ def execute(init_block, context)
                 else
                     $stderr.puts 'opa, class: ' + command.class.to_s
                     command.input_dfs_names.each do |arg_name|
+                        # expand array indexes
+                        indexes = []
+                        if arg_name.include?('[')
+                            $stderr.puts "It's array '#{arg_name}'"
+                            indexes_expr = arg_name.gsub(/[\[\]]/, ' ').split(/\s+/)
+                            arg_name = indexes_expr.shift
+                            $stderr.puts "arg = '#{arg_name}', inds = '#{indexes_expr}'"
+                            indexes = indexes_expr.map do |index_expr|
+                                expr = command.input_dfs.select{ |var| not var.value.nil? }.map{ |var| "#{var.name} = #{var.value}; " }.join + index_expr
+                                $stderr.puts "Index calculated as '#{expr}'"
+                                nil
+                            end
+                        end
+
                         arg_df = find_data_fragment(command, arg_name)
                         if arg_df.value.nil?
                             command.dep_counter += 1
                             arg_df.dependents << command
                         end
+
                         command.input_dfs << arg_df
                     end
                     p command.input_dfs
