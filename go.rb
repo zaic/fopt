@@ -62,14 +62,12 @@ end
 def args_parser(json, output_variables = nil)
     # ToDo: rename ;)
     target_variables = []
-    res = json.map{ |arg| cond_parser(arg) }.reduce([[],[]]) do |sum, parg|
-        parg[0] = parg[0][1...-1]
-        target_variables << parg[0]
-        [sum[0] | [parg[0]], sum[1] | parg[1]]
+    res = json.map{ |arg| cond_parser(arg) }.reduce([[],[]]) do |sum, parsed_arg|
+        parsed_arg[0] = parsed_arg[0][1...-1]
+        target_variables << parsed_arg[0]
+        [sum[0] | [parsed_arg[0]], sum[1] | parsed_arg[1]]
     end
-    p target_variables
-    p output_variables
-    output_variables.size.times{ |i| res[1] -= [target_variables[i]] if output_variables[i] } if output_variables # FixMe required input variable can be removed too :(
+    output_variables.size.times{ |i| res[1] -= [target_variables[i]] if output_variables[i] } if output_variables # ToDo required input variable can be removed too :(
     res
 end
 

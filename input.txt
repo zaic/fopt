@@ -34,7 +34,7 @@
         ,
         {
             "type" : "exec",
-            "id" : ["a"],
+            "id" : ["exec_a"],
             "code" : "hello_world",
             "args" : []
         }
@@ -51,7 +51,7 @@
                 },
                 {
                     "type": "exec",
-                    "id": ["init_random_value"],
+                    "id": ["init_random_value", {"type": "id", "ref": ["i"]}],
                     "code": "init_random_value",
                     "args": [{"type": "iconst", "value": "12"}, {"type": "id", "ref": ["N", {"type": "id", "ref": ["i"]}]}],
                     "rules": []
