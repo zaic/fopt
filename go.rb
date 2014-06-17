@@ -2,46 +2,7 @@ require 'json'
 
 require_relative 'luna/luna'
 require_relative 'execution/context'
-
-# Parse JSON condition expression and return pair<ruby_expression_string, list_of_dependencies>
-def cond_parser(cond)
-    if %w(+ - * / % && || < > <= >= != ==).include?(cond['type']) # op, op, operator
-        op_left = cond_parser(cond['operands'][0])
-        op_right = cond_parser(cond['operands'][1])
-        ["(#{op_left[0]}#{cond['type']}#{op_right[0]})", op_left[1] | op_right[1]]
-
-    elsif cond['type'] =~ /.const/ # iconst, fconst, sconst, etc...
-        ["(#{cond['value']})", []]
-
-    elsif cond['type'] == 'id' # data fragment
-        # get variable name
-        var_name = cond['ref'][0]
-        # other arguments correspond to array indexes
-        res = cond['ref'][1..-1].map{ |var| cond_parser(var) }.reduce([var_name, []]){ |sum, pair| [sum[0] + '[' + pair[0] + ']', sum[1] | pair[1]] }
-        # add itself ot dependencies
-        res[1] |= [res[0]]
-        # add braces around expression
-        res[0] = "(#{res[0]})"
-        # and return result
-        res
-
-    else
-        fail "Unknown type '#{cond['type']}' in condition '#{cond}'"
-    end
-end
-
-# Convert JSON to ruby expression
-def args_parser(json, output_variables = nil)
-    # ToDo: rename ;)
-    target_variables = []
-    res = json.map{ |arg| cond_parser(arg) }.reduce([[],[]]) do |sum, parsed_arg|
-        parsed_arg[0] = parsed_arg[0][1...-1]
-        target_variables << parsed_arg[0]
-        [sum[0] | [parsed_arg[0]], sum[1] | parsed_arg[1]]
-    end
-    output_variables.size.times{ |i| res[1] -= [target_variables[i]] if output_variables[i] } if output_variables # ToDo required input variable can be removed too :(
-    res
-end
+require_relative 'execution/parser'
 
 
 
@@ -60,7 +21,7 @@ def prepare(program, context, recursion_level = 0)
                 $stderr.puts  ' ' * recursion_level + 'extern ' + name.to_s + '(' + extern.args.join(', ') + ')'
 
             when 'struct'
-                result = block = Block.new(name, args_parser(args['args'])[0])
+                result = block = Block.new(name, parse_arguments_list(args['args'])[0])
                 context.add_block block
                 $stderr.puts  ' ' * recursion_level + 'struct ' + name.to_s + '(' + block.args.join(', ') + ')'
                 block.body = prepare(args['body'], context, recursion_level)
@@ -77,19 +38,19 @@ def prepare(program, context, recursion_level = 0)
                 fail "Unable to find function '#{code}' prototype" if prototype.nil?
                 output_list = prototype.args.map{ |type| type == 'name' }
 
-                func_args, deps = *args_parser(args['args'], output_list)
+                func_args, deps = *parse_arguments_list(args['args'], output_list)
 
                 result = execute = Execute.new(args['id'], args['code'], func_args, deps)
                 $stderr.puts  ' ' * recursion_level + 'exec ' + execute.code + '(' + execute.args.join(', ') + ') <' + deps.join(', ') + '>'
 
             when 'if'
-                result = opif = OperatorIf.new(*cond_parser(args['cond']))
+                result = opif = OperatorIf.new(*parse_expression(args['cond']))
                 $stderr.puts  ' ' * recursion_level + 'if (' + opif.condition + '), <' + opif.input_dfs_names.join(', ') + '>'
                 opif.body = prepare(args['body'], context, recursion_level).each{ |cmd| cmd.parent = opif }
 
             when 'for'
-                from = cond_parser(args['first'])
-                to = cond_parser(args['last'])
+                from = parse_expression(args['first'])
+                to = parse_expression(args['last'])
                 result = opfor = OperatorFor.new(args['var'], from[0], to[0], from[1] | to[1])
                 $stderr.puts  ' ' * recursion_level + "for (#{opfor.counter_name} = #{opfor.counter_from_expr} .. #{opfor.counter_to_expr}) <" + opfor.input_dfs_names.join(', ') + '>'
                 opfor.body = prepare(args['body'], context, recursion_level).each{ |cmd| cmd.parent = opif }
