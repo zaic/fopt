@@ -101,14 +101,13 @@ def prepare(program, context, recursion_level = 0)
                 $stderr.puts  ' ' * recursion_level + 'dfs: ' + df.names.join(', ')
 
             when 'exec'
-                # FixMe only input varibles should be included in dependencies
                 code = args['code']
                 prototype = context.externs[code] if context.externs.key?(code)
                 prototype = context.blocks[code] if context.blocks.key?(code)
                 fail "Unable to find function '#{code}' prototype" if prototype.nil?
-                output_hint = prototype.args.map{ |type| type == 'name' }
+                output_list = prototype.args.map{ |type| type == 'name' }
 
-                func_args, deps = *args_parser(args['args'], output_hint)
+                func_args, deps = *args_parser(args['args'], output_list)
 
                 result = execute = Execute.new(args['id'], args['code'], func_args, deps)
                 $stderr.puts  ' ' * recursion_level + 'exec ' + execute.code + '(' + execute.args.join(', ') + ') <' + deps.join(', ') + '>'
@@ -151,17 +150,15 @@ def execute(init_block, context)
     loop do
         break if ready_to_process.empty?
         block = ready_to_process.pop
-
-        p "==="
         $stderr.puts "Processing #{block}"
 
         if block.kind_of?(Execute)
-            $stderr.puts "Executing #{block.code} (parent: #{block.parent}, args: #{block.args})"
+            $stderr.puts "  Executing #{block.code} (parent: #{block.parent}, args: #{block.args})"
 
             # extern function
             if context.externs.key?(block.code)
                 function = context.externs[block.code]
-                $stderr.puts "Function prototype is #{function.args}"
+                $stderr.puts "  Function prototype is #{function.args}"
 
                 #resolved_args = block.args.map{ |name| find_data_fragment(block, name)}
                 resolved_args = function.args.size.times.map do |i|
@@ -172,26 +169,26 @@ def execute(init_block, context)
                         # FixMe copy-paste :(
                         indexes = []
                         if name.include?('[')
-                            $stderr.puts "It's array in function args '#{name}'"
+                            $stderr.puts "  It's array in function args '#{name}'"
                             indexes_expr = name.gsub(/[\[\]]/, ' ').split(/\s+/)
                             name = indexes_expr.shift
                             indexes = indexes_expr.map do |index_expr|
                                 # FixMe replace by local_eval. or don't replace...
                                 expr = block.input_dfs.select{ |var| not var.value.nil? }.map{ |var| "#{var.name} = #{var.value}; " }.join + index_expr
                                 index_value = eval(expr).to_s
-                                $stderr.puts "Index calculated as '#{expr}' = '#{index_value}'"
+                                $stderr.puts "  Index calculated as '#{expr}' = '#{index_value}'"
                                 index_value
                             end
                         end
 
                         df = find_data_fragment(block, name)
                         indexes.each{ |id| df = df[id] }
-                        $stderr.puts "TrOlolo my name is '#{df.inspect}'"
+                        $stderr.puts "  TrOlolo my name is '#{df.inspect}'"
                         df
 
                     elsif type == 'int' or type == 'real' or type == 'string'
-                        $stderr.puts "Create stub DataFragment with value '#{name}'"
-                        DataFragment.new("noname_expression", block.local_eval(name))
+                        $stderr.puts "  Create stub DataFragment with value '#{name}'"
+                        DataFragment.new('noname_expression', block.local_eval(name))
 
                     else
                         fail "Unknown argument type '#{type}'"
@@ -216,6 +213,7 @@ def execute(init_block, context)
 
             # inner struct function
             elsif context.blocks.key?(block.code)
+                # FixMe implement
 
             # ooops...
             else
@@ -226,32 +224,13 @@ def execute(init_block, context)
         else
             block.body.each do |command|
                 if command.kind_of?(DataFragmentsDefinition)
-                    $stderr.puts "Defining variables #{command.names.join(', ')}"
+                    $stderr.puts "  Defining variables #{command.names.join(', ')}"
                     command.names.each{ |name| block.data_fragments[name] = DataFragment.new(name) }
 
                 else
-                    $stderr.puts 'opa, class: ' + command.class.to_s
+                    $stderr.puts '  Opa, found class: ' + command.class.to_s
                     command.input_dfs_names.each do |arg_name|
-                        # expand array indexes
-                        indexes = []
-                        if arg_name.include?('[')
-                            $stderr.puts "It's array '#{arg_name}'"
-                            indexes_expr = arg_name.gsub(/[\[\]]/, ' ').split(/\s+/)
-                            arg_name = indexes_expr.shift
-                            $stderr.puts "arg = '#{arg_name}', inds = '#{indexes_expr}'"
-                            indexes = indexes_expr.map do |index_expr|
-                                # FixMe replace by local_eval. or don't replace...
-                                expr = command.input_dfs.select{ |var| not var.value.nil? }.map{ |var| "#{var.name} = #{var.value}; " }.join + index_expr
-                                index_value = eval(expr).to_s
-                                $stderr.puts "Index calculated as '#{expr}' = '#{index_value}'"
-                                index_value
-                            end
-                        end
-                        arg_name
-
-                        arg_df = find_data_fragment(command, arg_name)
-                        indexes.each{ |id| arg_df = arg_df[id] }
-                        $stderr.puts "Ololo my name is '#{arg_df.inspect}'"
+                        arg_df = command.resolve_indexes(arg_name)
 
                         if arg_df.value.nil?
                             command.dep_counter += 1

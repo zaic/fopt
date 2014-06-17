@@ -45,22 +45,22 @@ class Element
     def resolve_indexes(name)
         indexes = []
         if name.include?('[')
-            $stderr.puts "It's array '#{name}'"
+            $stderr.puts "  It's array '#{name}'"
             indexes_expr = name.gsub(/[\[\]]/, ' ').split(/\s+/)
             name = indexes_expr.shift
-            $stderr.puts "arg = '#{name}', inds = '#{indexes_expr}'"
+            $stderr.puts "  arg = '#{name}', inds = '#{indexes_expr}'"
             indexes = indexes_expr.map do |index_expr|
                 # FixMe replace by local_eval. or don't replace...
                 expr = input_dfs.select{ |var| not var.value.nil? }.map{ |var| "#{var.name} = #{var.value}; " }.join + index_expr
                 index_value = eval(expr).to_s
-                $stderr.puts "Index calculated as '#{expr}' = '#{index_value}'"
+                $stderr.puts "    Index calculated as '#{expr}' = '#{index_value}'"
                 index_value
             end
         end
 
         df = self.find_data_fragment(name)
         indexes.each{ |id| df = df[id] }
-        $stderr.puts "PyschOlolo my name is '#{df.inspect}'"
+        $stderr.puts "  PyschOlolo my name is '#{df.inspect}'"
 
         df
     end
